@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Joguinho AntiTédio</title>
+
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
+        color: white;
+        font-family: Arial;
+        text-align: center;
+    }
+
+    canvas {
+        display: block;
+        margin: 0 auto;
+        background: #111;
+    }
+</style>
+</head>
+
+<body>
+
+<canvas id="gameCanvas" width="600" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// ESTADO
+let jogoRodando = true;
+let score = 0;
+let vidas = 3;
+let velocidadeInimigo = 2;
+
+// NAVE
+let nave = {
+    x: 280,
+    y: 350,
+    width: 40,
+    height: 20,
+    speed: 5
+};
+
+// TIROS
+let tiros = [];
+
+// INIMIGOS
+let inimigos = [];
+
+// CONTROLES
+let teclas = {};
+
+document.addEventListener("keydown", (e) => teclas[e.key] = true);
+document.addEventListener("keyup", (e) => teclas[e.key] = false);
+
+// DISPARO
+document.addEventListener("keydown", (e) => {
+    if (e.key === " " && jogoRodando) {
+        tiros.push({
+            x: nave.x + nave.width/2 - 2,
+            y: nave.y
+        });
+    }
+
+    // REINICIAR
+    if (!jogoRodando && e.key === "Enter") {
+        reiniciarJogo();
+    }
+});
+
+// CRIAR INIMIGOS
+function criarInimigo() {
+    if (!jogoRodando) return;
+
+    inimigos.push({
+        x: Math.random() * 560,
+        y: 0,
+        width: 40,
+        height: 20,
+        speed: velocidadeInimigo
+    });
+}
+
+// DESENHAR NAVE
+function desenharNave() {
+    ctx.fillStyle = "cyan";
+    ctx.fillRect(nave.x, nave.y, nave.width, nave.height);
+}
+
+// TIROS
+function desenharTiros() {
+    ctx.fillStyle = "yellow";
+    tiros.forEach((t, i) => {
+        t.y -= 7;
+        ctx.fillRect(t.x, t.y, 4, 10);
+
+        if (t.y < 0) tiros.splice(i, 1);
+    });
+}
+
+// INIMIGOS
+function desenharInimigos() {
+    ctx.fillStyle = "red";
+    inimigos.forEach((e, i) => {
+        e.y += e.speed;
+        ctx.fillRect(e.x, e.y, e.width, e.height);
+
+        // SE PASSAR = PERDE VIDA
+        if (e.y > canvas.height) {
+            inimigos.splice(i, 1);
+            vidas--;
+
+            if (vidas <= 0) {
+                gameOver();
+            }
+        }
+    });
+}
+
+// COLISÃO
+function colisao(a, b) {
+    return (
+        a.x < b.x + b.width &&
+        a.x + 4 > b.x &&
+        a.y < b.y + b.height &&
+        a.y + 10 > b.y
+    );
+}
+
+// HUD
+function desenharHUD() {
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+    ctx.fillText("Score: " + score, 10, 20);
+    ctx.fillText("Vidas: " + vidas, 500, 20);
+}
+
+// GAME OVER
+function gameOver() {
+    jogoRodando = false;
+}
+
+// TELA GAME OVER
+function desenharGameOver() {
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    ctx.fillText("GAME OVER", 200, 180);
+
+    ctx.font = "16px Arial";
+    ctx.fillText("Pressione ENTER para reiniciar", 170, 220);
+}
+
+// REINICIAR
+function reiniciarJogo() {
+    score = 0;
+    vidas = 3;
+    velocidadeInimigo = 2;
+    tiros = [];
+    inimigos = [];
+    jogoRodando = true;
+}
+
+// LOOP
+function atualizar() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (jogoRodando) {
+
+        // MOVIMENTO
+        if (teclas["ArrowLeft"] && nave.x > 0) nave.x -= nave.speed;
+        if (teclas["ArrowRight"] && nave.x < canvas.width - nave.width) nave.x += nave.speed;
+
+        desenharNave();
+        desenharTiros();
+        desenharInimigos();
+        desenharHUD();
+
+        // COLISÕES
+        tiros.forEach((t, ti) => {
+            inimigos.forEach((e, ei) => {
+                if (colisao(t, e)) {
+                    tiros.splice(ti, 1);
+                    inimigos.splice(ei, 1);
+                    score += 10;
+
+                    // AUMENTA DIFICULDADE
+                    if (score % 50 === 0) {
+                        velocidadeInimigo += 0.5;
+                    }
+                }
+            });
+        });
+
+    } else {
+        desenharGameOver();
+    }
+
+    requestAnimationFrame(atualizar);
+}
+
+// SPAWN
+setInterval(criarInimigo, 1000);
+
+// START
+atualizar();
+</script>
+
+</body>
+</html>
